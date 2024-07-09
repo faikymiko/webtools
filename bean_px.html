@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Zoom and Pan with Canvas</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #container {
+            position: relative;
+            width: 800px; /* 限制显示区域的宽度 */
+            height: 800px; /* 限制显示区域的高度 */
+            overflow: hidden; /* 隐藏超出显示区域的部分 */
+        }
+        #canvas {
+            border: 1px solid black;
+            touch-action: none; /* 防止默认触摸动作 */
+            width: 800px; /* 设置画布显示宽度 */
+            height: 800px; /* 设置画布显示高度 */
+        }
+    </style>
+    
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+    </div>
+    <input type="file" id="imageLoader" accept="image/*" />
+    <textarea id="base64Text" placeholder="Paste image Base64 here or click 'button' to get Base64"></textarea>
+    <button id="saveImage">out-Text</button>
+    <button id="loadImage">in-Text</button>
+
+
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const imageLoader = document.getElementById('imageLoader');
+        let img = new Image();
+        let scale = 1;
+        let originX = 0;
+        let originY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let lastTouchDistance = null;
+
+        
+    
+        // Load image
+        imageLoader.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.onload = () => {
+                    canvas.width = 800; // 固定画布宽度为800
+                    canvas.height = 800; // 固定画布高度为800
+                    originX = 0;
+                    originY = 0;
+                    scale = Math.min(canvas.width / img.width, canvas.height / img.height); // 初始按比例缩放图像
+                    
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.mozImageSmoothingEnabled = false;
+                    ctx.webkitImageSmoothingEnabled = false;
+                    ctx.msImageSmoothingEnabled = false;
+
+                    drawImage();
+                    
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+    
+        // Draw image
+        function drawImage() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(originX, originY);
+            ctx.scale(scale, scale);
+            const x = (canvas.width / scale - img.width) / 2;
+            const y = (canvas.height / scale - img.height) / 2;
+            ctx.drawImage(img, x, y);
+            ctx.restore();
+        }
+    
+        // Calculate distance between two touch points
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+    
+        // Handle pinch zoom
+        function handlePinchZoom(event) {
+            if (event.touches.length === 2) {
+                const touchDistance = getTouchDistance(event.touches);
+                if (lastTouchDistance) {
+                    const delta = touchDistance - lastTouchDistance;
+                    const zoomFactor = delta > 0 ? 1.1 : 0.9;
+                    const mouseX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+                    const mouseY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+    
+                    // Adjust origin to keep the image centered on the zoom point
+                    const prevScale = scale;
+                    scale *= zoomFactor;
+                    originX -= (mouseX / prevScale) * (zoomFactor - 1);
+                    originY -= (mouseY / prevScale) * (zoomFactor - 1);
+    
+                    drawImage();
+                }
+                lastTouchDistance = touchDistance;
+            }
+        }
+    
+        // Handle touch start
+        canvas.addEventListener('touchstart', (event) => {
+            if (event.touches.length === 1) {
+                isDragging = true;
+                startX = event.touches[0].clientX - originX;
+                startY = event.touches[0].clientY - originY;
+            }
+            lastTouchDistance = null;
+        });
+    
+        // Handle touch move
+        canvas.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+            if (event.touches.length === 1 && isDragging) {
+                originX = event.touches[0].clientX - startX;
+                originY = event.touches[0].clientY - startY;
+                drawImage();
+            } else if (event.touches.length === 2) {
+                handlePinchZoom(event);
+                isDragging = false;
+            }
+        });
+    
+        // Handle touch end
+        canvas.addEventListener('touchend', (event) => {
+            if (event.touches.length < 2) {
+                lastTouchDistance = null;
+            }
+            isDragging = false;
+        });
+    
+        // Zoom function for mouse wheel
+        function zoom(event) {
+            event.preventDefault();
+            const delta = Math.sign(event.deltaY);
+            const mouseX = event.offsetX;
+            const mouseY = event.offsetY;
+            const zoomFactor = delta < 0 ? 1.1 : 0.9;
+            const prevScale = scale;
+            scale *= zoomFactor;
+    
+            // Adjust origin to keep the image centered on the zoom point
+            originX -= (mouseX / prevScale) * (zoomFactor - 1);
+            originY -= (mouseY / prevScale) * (zoomFactor - 1);
+    
+            drawImage();
+        }
+    
+        canvas.addEventListener('wheel', zoom);
+
+
+        const saveImageBtn = document.getElementById('saveImage');
+        saveImageBtn.addEventListener('click', () => {
+            const dataURL = canvas.toDataURL();
+            base64Text.value = dataURL;
+        });
+
+        const loadImageBtn = document.getElementById('loadImage');
+        loadImageBtn.addEventListener('click', () => {
+            const dataURL = base64Text.value;
+            if (dataURL) {
+                img.onload = () => {
+                    canvas.width = 800; // 固定画布宽度为800
+                    canvas.height = 800; // 固定画布高度为800
+                    originX = 0;
+                    originY = 0;
+                    scale = Math.min(canvas.width / img.width, canvas.height / img.height); // 初始按比例缩放图像
+                    drawImage();
+                };
+                img.src = dataURL;
+            }
+        });
+
+        // Draw image
+function drawImage() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(originX, originY);
+    ctx.scale(scale, scale);
+    const x = (canvas.width / scale - img.width) / 2;
+    const y = (canvas.height / scale - img.height) / 2;
+    ctx.drawImage(img, x, y);
+
+    // 获取图像的实际尺寸
+    const imageWidth = img.width;
+    const imageHeight = img.height;
+
+    // 绘制网格线
+    drawGrid(imageWidth, imageHeight);
+
+    ctx.restore();
+}
+
+// 绘制网格线函数
+function drawGrid(imageWidth, imageHeight) {
+    ctx.beginPath();
+    // 计算每个格子的宽度和高度
+    const cellWidth = canvas.width / imageWidth;
+    const cellHeight = canvas.height / imageHeight;
+
+    // 绘制垂直网格线
+    for (let x = 0; x <= imageWidth; x++) {
+        const xPos = x * cellWidth;
+        ctx.moveTo(xPos, 0);
+        ctx.lineTo(xPos, canvas.height);
+    }
+
+    // 绘制水平网格线
+    for (let y = 0; y <= imageHeight; y++) {
+        const yPos = y * cellHeight;
+        ctx.moveTo(0, yPos);
+        ctx.lineTo(canvas.width, yPos);
+    }
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.stroke();
+}
+    </script>
+</body>
+</html>
