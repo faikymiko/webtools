@@ -1,41 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Zoom and Pan with Canvas</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        #container {
-            position: relative;
-            width: 800px; /* 限制显示区域的宽度 */
-            height: 800px; /* 限制显示区域的高度 */
-            overflow: hidden; /* 隐藏超出显示区域的部分 */
-        }
-        #canvas {
-            border: 1px solid black;
-            touch-action: none; /* 防止默认触摸动作 */
-            width: 800px; /* 设置画布显示宽度 */
-            height: 800px; /* 设置画布显示高度 */
-        }
-    </style>
-    
-</head>
-<body>
-    <div id="container">
-        <canvas id="canvas"></canvas>
-    </div>
-    <input type="file" id="imageLoader" accept="image/*" />
-    <textarea id="base64Text" placeholder="Paste image Base64 here or click 'button' to get Base64"></textarea>
-    <button id="saveImage">out-Text</button>
-    <button id="loadImage">in-Text</button>
-
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Image Zoom and Pan with Canvas</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                overflow: hidden; /* 防止页面超出屏幕 */
+            }
+            #container {
+                position: relative;
+                width: 800px; /* 限制显示区域的宽度 */
+                height: 800px; /* 限制显示区域的高度 */
+                overflow: hidden; /* 隐藏超出显示区域的部分 */
+            }
+            #canvas {
+                border: 1px solid black;
+                touch-action: none; /* 防止默认触摸动作 */
+                width: 800px; /* 设置画布显示宽度 */
+                height: 800px; /* 设置画布显示高度 */
+            }
+            #right-panel {
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                margin-left: 20px;
+                height: 100%;
+                max-height: 800px;
+            }
+            #controls {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            #upload-section {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 20px;
+            }
+            #checkboxes {
+                margin-bottom: 20px;
+            }
+            #bean_color_div_i {
+                width: 400px; /* 设置右侧div宽度 */
+                height: 400px; /* 设置右侧div高度 */
+                border: 1px solid #ccc;
+                overflow-x: auto;
+                overflow-y: auto;
+            }
+            .color-block {
+                display: flex;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            .color-block div {
+                width: 10px;
+                height: 10px;
+                margin-right: 10px;
+            }
+            button {
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <canvas id="canvas"></canvas>
+        </div>
+        <div id="right-panel">
+            <div id="controls">
+                <div id="upload-section">
+                    <input type="file" id="imageLoader" accept="image/*" />
+                    <textarea id="base64Text" placeholder="在此处粘贴base64格式的图片文本"></textarea>
+                    <div>
+                        <button id="saveImage">生成文本(刷新1)</button>
+                        <button id="loadImage">文本导入(刷新2)</button>
+                    </div>
+                    <div>原图大小:<span id="org_size_sp_i">null*null</span>(大于300px运行缓慢)</div>
+                </div>
+                <div id="checkboxes">
+                    <label for="grid_input_i">网格:</label>
+                    <input type="checkbox" id="grid_input_i" name="grid_input_n" onchange="handleChange()">
+                    
+                    <label for="tag_input_i">标签:</label>
+                    <input type="checkbox" id="tag_input_i" name="tag_input_n" onchange="handleChange()" checked>
+                </div>
+            </div>
+            <div id="bean_color_div_i">
+            </div>
+        </div>
 
 
     <script>
@@ -43,12 +102,21 @@
         const ctx = canvas.getContext('2d');
         const imageLoader = document.getElementById('imageLoader');
         let img = new Image();
+        let org_img = new Image();
         let scale = 1;
         let originX = 0;
         let originY = 0;
         let isDragging = false;
         let startX, startY;
         let lastTouchDistance = null;
+        let cell_size=1
+
+        let rgb_list = [];
+        let color_count = {};
+        let color_pos = {};
+        let similarityLists=[];
+
+        
 
         
     
@@ -62,8 +130,9 @@
                     canvas.height = 800; // 固定画布高度为800
                     originX = 0;
                     originY = 0;
-                    scale = Math.min(canvas.width / img.width, canvas.height / img.height); // 初始按比例缩放图像
                     
+                    scale = Math.min(canvas.width / img.width, canvas.height / img.height)*0.6; // 初始按比例缩放图像
+                    console.log(img.naturalWidth,img.naturalHeight)
                     ctx.imageSmoothingEnabled = false;
                     ctx.mozImageSmoothingEnabled = false;
                     ctx.webkitImageSmoothingEnabled = false;
@@ -72,12 +141,16 @@
                     drawImage();
                     
                 }
+                org_img.src = e.target.result;
                 img.src = e.target.result;
+
+                processImage()
             }
             reader.readAsDataURL(file);
+
         });
     
-        // Draw image
+                // Draw image
         function drawImage() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
@@ -86,7 +159,134 @@
             const x = (canvas.width / scale - img.width) / 2;
             const y = (canvas.height / scale - img.height) / 2;
             ctx.drawImage(img, x, y);
+
+            // 获取图像的实际尺寸
+            const imageWidth = img.width;
+            const imageHeight = img.height;
+
+            let gridRadio = document.getElementById('grid_input_i');
+            // 检查单选按钮是否被选中
+            if (gridRadio.checked) {
+                //绘制网格线
+                drawGrid(x,y);
+            }
+
+            
+            drawCellXY(x,y)
+
+            let tagRadio = document.getElementById('tag_input_i');
+            // 检查单选按钮是否被选中
+            if (tagRadio.checked) {
+                //绘制标签
+                drawTag(x,y)
+            }
+                
+
             ctx.restore();
+
+            console.log(scale,imageWidth,imageHeight,x,y,"offset",originX,originY)
+        }
+
+        
+
+        // 绘制网格线函数
+        function drawGrid(o_x,o_y) {
+            ctx.strokeStyle = '#00000033';  // 设置线条颜色为浅灰色
+            ctx.lineWidth = 0.1;  // 设置线条粗细为1像素
+            
+            
+
+            // 绘制水平线条
+            for (let y = 0; y < img.height+1; y += cell_size) {
+                ctx.beginPath();
+                ctx.moveTo(o_x+0, o_y+y);
+                ctx.lineTo(o_x+img.width, o_y+y);
+                ctx.stroke();
+            }
+            
+            // 绘制垂直线条
+            for (let x = 0; x < img.width+1; x += cell_size) {
+                ctx.beginPath();
+                ctx.moveTo(o_x+x, o_y+0);
+                ctx.lineTo(o_x+x, o_y+img.height);
+                ctx.stroke();
+            }
+        }
+
+        function drawCellXY(o_x,o_y) {
+            // 设置文本样式
+            ctx.font = '0.5px Arial'; // 设置字体大小和字体类型
+            ctx.fillStyle = '#4f4f4f'; // 设置填充颜色
+
+            
+            // 绘制水平线条
+            let i=1
+            for (let y = 0; y < img.height; y += cell_size) {
+                ctx.fillText(i, o_x+0 -0.7, o_y+y +0.7);
+                i=i+1
+            }
+            
+            // 绘制垂直线条
+            i=1
+            for (let x = 0; x < img.width; x += cell_size) {
+                ctx.fillText(i, o_x+x +0.2, o_y+0 -0.2);
+                i=i+1
+            }
+        }
+
+
+        function drawTag(o_x,o_y) {
+            // 设置文本样式
+            
+            
+            i=0
+            Object.keys(color_pos).forEach(color => {
+                // console.log(`Color: ${color}`);
+                ctx.font = '0.45px Arial'; // 设置字体大小和字体类型
+                
+                // 将颜色值转换为 RGB
+                let r = parseInt(color.substr(0, 2), 16);
+                let g = parseInt(color.substr(2, 2), 16);
+                let b = parseInt(color.substr(4, 2), 16);
+                // 计算亮度
+                let brightness = Math.sqrt(0.299 * r * r + 0.587 * g * g + 0.114 * b * b) / 255;
+                if(brightness<0.5){
+                    // 设置文本颜色
+                    ctx.fillStyle = '#000000'; // 设置填充颜色
+                }else{
+                    ctx.fillStyle = '#ffffff'; // 设置填充颜色
+                }
+
+                let mm_code=similarityLists[i][0].mm
+
+                color_pos[color].forEach(pos => {
+                    // console.log(`Position: x = ${pos.x}, y = ${pos.y}`);
+
+
+                    ctx.fillText(mm_code, o_x+pos.x +0.1 , o_y+pos.y +0.8);
+
+                });
+
+                i=i+1
+            });
+
+            
+
+            // // 绘制水平线条
+            // for (let y = 0; y < img.height+1; y += cell_size) {
+            //     ctx.beginPath();
+            //     ctx.moveTo(o_x+0, o_y+y);
+            //     ctx.lineTo(o_x+img.width, o_y+y);
+            //     ctx.stroke();
+            // }
+            
+            // // 绘制垂直线条
+            // for (let x = 0; x < img.width+1; x += cell_size) {
+            //     ctx.beginPath();
+            //     ctx.moveTo(o_x+x, o_y+0);
+            //     ctx.lineTo(o_x+x, o_y+img.height);
+            //     ctx.stroke();
+            // }
         }
     
         // Calculate distance between two touch points
@@ -168,11 +368,34 @@
     
         canvas.addEventListener('wheel', zoom);
 
+        function create_hidden_canvas(i_img){
+            // 创建一个 <canvas> 元素
+            let temp_canvas = document.createElement('canvas');
+            let temp_ctx = temp_canvas.getContext('2d');
+
+            // 设置 canvas 的尺寸与图片相同
+            temp_canvas.width = i_img.width;
+            temp_canvas.height = i_img.height;
+
+            // 在 canvas 上绘制图片
+            temp_ctx.drawImage(i_img, 0, 0);
+
+            return temp_canvas
+        }
 
         const saveImageBtn = document.getElementById('saveImage');
         saveImageBtn.addEventListener('click', () => {
-            const dataURL = canvas.toDataURL();
-            base64Text.value = dataURL;
+            
+            // 创建一个 <canvas> 元素
+            let temp_canvas = create_hidden_canvas(org_img)
+
+            // 获取 Base64 数据
+            let base64String = temp_canvas.toDataURL('image/png');  // 可以指定图片格式，如 'image/jpeg' 或 'image/png'
+
+            base64Text.value = base64String
+
+            document.getElementById('org_size_sp_i').innerText=org_img.width+" x "+org_img.height
+            processImage()
         });
 
         const loadImageBtn = document.getElementById('loadImage');
@@ -184,57 +407,416 @@
                     canvas.height = 800; // 固定画布高度为800
                     originX = 0;
                     originY = 0;
-                    scale = Math.min(canvas.width / img.width, canvas.height / img.height); // 初始按比例缩放图像
+                    scale = Math.min(canvas.width / img.width, canvas.height / img.height)*0.6; // 初始按比例缩放图像
+                    
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.mozImageSmoothingEnabled = false;
+                    ctx.webkitImageSmoothingEnabled = false;
+                    ctx.msImageSmoothingEnabled = false;
+                    
                     drawImage();
                 };
+                org_img.src = dataURL;
                 img.src = dataURL;
+
+                processImage()
             }
+
         });
 
-        // Draw image
-function drawImage() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.translate(originX, originY);
-    ctx.scale(scale, scale);
-    const x = (canvas.width / scale - img.width) / 2;
-    const y = (canvas.height / scale - img.height) / 2;
-    ctx.drawImage(img, x, y);
+        function handleChange() {
+            drawImage()
+        }
 
-    // 获取图像的实际尺寸
-    const imageWidth = img.width;
-    const imageHeight = img.height;
+        function get_rgb_list() {
+            let temp_canvas = create_hidden_canvas(org_img);
+            let rgb_list = [];
+            let color_count = {};
+            let color_pos = {};
 
-    // 绘制网格线
-    drawGrid(imageWidth, imageHeight);
+            let ctx = temp_canvas.getContext('2d');
 
-    ctx.restore();
-}
+            for (let y = 0; y < org_img.height; y += cell_size) {
+                let line_list = [];
+                for (let x = 0; x < org_img.width; x += cell_size) {
+                    let RGBA_list = ctx.getImageData(x, y, 1, 1).data;
 
-// 绘制网格线函数
-function drawGrid(imageWidth, imageHeight) {
-    ctx.beginPath();
-    // 计算每个格子的宽度和高度
-    const cellWidth = canvas.width / imageWidth;
-    const cellHeight = canvas.height / imageHeight;
+                    let hex_str =
+                        RGBA_list[0].toString(16).padStart(2, '0') +
+                        RGBA_list[1].toString(16).padStart(2, '0') +
+                        RGBA_list[2].toString(16).padStart(2, '0') +
+                        RGBA_list[3].toString(16).padStart(2, '0');
 
-    // 绘制垂直网格线
-    for (let x = 0; x <= imageWidth; x++) {
-        const xPos = x * cellWidth;
-        ctx.moveTo(xPos, 0);
-        ctx.lineTo(xPos, canvas.height);
+                    if (hex_str !== "00000000") {
+                        if (color_count[hex_str]) {
+                            color_count[hex_str]++;
+                            color_pos[hex_str].push({x: x, y: y});
+                        } else {
+                            color_count[hex_str] = 1;
+                            color_pos[hex_str] = [{x: x, y: y}];
+                        }
+                    }
+
+                    line_list.push(hex_str);
+                }
+                rgb_list.push(line_list);
+            }
+
+            return [ rgb_list, color_count, color_pos ];
+        }
+
+        
+
+
+        // RGB to XYZ conversion
+        function rgbToXyz(r, g, b) {
+            // Normalize the RGB values to [0, 1]
+            r /= 255; g /= 255; b /= 255;
+
+            // Convert to XYZ using the sRGB color space
+            r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+            g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+            b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+
+            let x = r * 0.4124564 + g * 0.3575761 + b * 0.1804375;
+            let y = r * 0.2126729 + g * 0.7151522 + b * 0.0721750;
+            let z = r * 0.0193339 + g * 0.1191920 + b * 0.9503041;
+
+            return [x, y, z];
+        }
+
+        // XYZ to LAB conversion
+        function xyzToLab(x, y, z) {
+            // Reference white point for D65
+            let refX =  95.047;
+            let refY = 100.000;
+            let refZ = 108.883;
+
+            x /= refX; y /= refY; z /= refZ;
+
+            x = x > 0.008856 ? Math.pow(x, 1/3) : (7.787 * x) + (16 / 116);
+            y = y > 0.008856 ? Math.pow(y, 1/3) : (7.787 * y) + (16 / 116);
+            z = z > 0.008856 ? Math.pow(z, 1/3) : (7.787 * z) + (16 / 116);
+
+            let l = (116 * y) - 16;
+            let a = 500 * (x - y);
+            let b = 200 * (y - z);
+
+            return [l, a, b];
+        }
+
+        // RGB to LAB conversion
+        function rgbToLab(r, g, b) {
+            let [x, y, z] = rgbToXyz(r, g, b);
+            return xyzToLab(x, y, z);
+        }
+
+        // Calculate CIE76 distance between two LAB colors
+        function cie76(lab1, lab2) {
+            let [l1, a1, b1] = lab1;
+            let [l2, a2, b2] = lab2;
+
+            return Math.sqrt(
+                Math.pow(l1 - l2, 2) +
+                Math.pow(a1 - a2, 2) +
+                Math.pow(b1 - b2, 2)
+            );
+        }
+
+        // Get similarity list using CIE76
+        function findSimilarColors(inputColor) {
+            let [r1, g1, b1] = hexToRgb(inputColor);
+            let lab1 = rgbToLab(r1, g1, b1);
+
+            let similarities = bean_color_json_table.table.map(entry => {
+                let [r2, g2, b2] = hexToRgb(entry.rgb);
+                let lab2 = rgbToLab(r2, g2, b2);
+                let distance = cie76(lab1, lab2);
+
+                return {
+                    ...entry,
+                    similarity: 1 / (1 + distance) // 相似度计算公式：距离越小，相似度越高
+                };
+            });
+
+            // 按相似度从高到低排序
+            similarities.sort((a, b) => b.similarity - a.similarity);
+
+            return similarities.slice(0,5);
+        }
+
+        // Convert hex color to RGB
+        function hexToRgb(hex) {
+            let bigint = parseInt(hex, 16);
+            let r = (bigint >> 16) & 255;
+            let g = (bigint >> 8) & 255;
+            let b = bigint & 255;
+
+            return [r, g, b];
+        }
+
+        
+
+
+
+
+        // Main function to process image and update DOM
+    function processImage(img=org_img, cell_size=1) {
+        let temp_canvas = create_hidden_canvas(org_img);
+        
+        [rgb_list,color_count,color_pos] = get_rgb_list()
+
+        // Update DOM with similarity results
+        let similarColorsDiv = document.getElementById("bean_color_div_i");
+        if (similarColorsDiv) {
+            similarColorsDiv.innerHTML = ""; // 清空之前的内容
+            similarityLists=[]
+            Object.keys(color_count).forEach(color_with_A => {
+                
+                color=color_with_A.slice(0,6)
+                let similarityList = findSimilarColors(color);
+                similarityLists.push(similarityList)
+
+                let colorBlock = document.createElement("div");
+                colorBlock.style.border = "1px solid #ccc";
+                colorBlock.style.margin = "5px";
+                colorBlock.style.padding = "5px";
+                colorBlock.style.display = "flex";
+                colorBlock.style.alignItems = "center";
+
+                let CountText = document.createElement("span");
+                CountText.textContent = color_count[color_with_A]+"格";
+                CountText.style.fontSize = "10px"
+                CountText.style.marginRight = "3px";
+
+                let originalColorText = document.createElement("span");
+                originalColorText.textContent = "#"+color;
+                originalColorText.style.fontSize = "10px"
+                originalColorText.style.marginRight = "3px";
+
+                let originalColorBlock = document.createElement("div");
+                originalColorBlock.style.width = "20px";
+                originalColorBlock.style.height = "20px";
+                originalColorBlock.style.backgroundColor = `#${color}`;
+                originalColorBlock.style.marginRight = "10px";
+
+                colorBlock.appendChild(CountText)
+                colorBlock.appendChild(originalColorText)
+                colorBlock.appendChild(originalColorBlock);
+
+                similarityList.forEach(similarity => {
+                    let similarColorBlock = document.createElement("div");
+                    similarColorBlock.style.width = "20px";
+                    similarColorBlock.style.height = "20px";
+                    similarColorBlock.style.backgroundColor = `#${similarity.rgb}`;
+                    similarColorBlock.style.marginRight = "2px";
+                    
+
+                    let bean_code = document.createElement("span");
+                    bean_code.textContent =(similarity.similarity.toFixed(2)*100).toFixed(0);
+                    bean_code.style.fontSize = "4px"
+                    bean_code.style.marginLeft = "2px";
+                    similarColorBlock.appendChild(bean_code)
+
+                    let similarityText = document.createElement("span");
+                    similarityText.textContent = similarity.mm;
+                    similarityText.style.fontSize = "10px"
+                    similarityText.style.marginRight = "3px";
+
+                    colorBlock.appendChild(similarColorBlock);
+                    // colorBlock.appendChild(bean_code);
+                    colorBlock.appendChild(similarityText);
+                });
+
+                similarColorsDiv.appendChild(colorBlock);
+            });
+        }
+
+
+        return [ rgb_list, color_count, color_pos ];
     }
 
-    // 绘制水平网格线
-    for (let y = 0; y <= imageHeight; y++) {
-        const yPos = y * cellHeight;
-        ctx.moveTo(0, yPos);
-        ctx.lineTo(canvas.width, yPos);
-    }
 
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.stroke();
-}
+    function fun1(){
+        let result = processImage();
+        console.log(result);
+
+    }
+    
+        
     </script>
 </body>
 </html>
+
+<script>
+    const bean_color_json_table={"table":[
+        {"mm":"A1" ,"mard":"F1" ,"rgb":"fda098" ,"type":""},
+        {"mm":"A2" ,"mard":"F2" ,"rgb":"fa6a62" ,"type":""},
+        {"mm":"A3" ,"mard":"F3" ,"rgb":"ec4a59" ,"type":""},
+        {"mm":"A4" ,"mard":"F4" ,"rgb":"ff452c" ,"type":""},
+        {"mm":"A5" ,"mard":"F5" ,"rgb":"ff0000" ,"type":""},
+        {"mm":"A6" ,"mard":"F7" ,"rgb":"811530" ,"type":""},
+        {"mm":"A7" ,"mard":"E2" ,"rgb":"ffcaea" ,"type":""},
+        {"mm":"A8" ,"mard":"E3" ,"rgb":"fb8dc5" ,"type":""},
+        {"mm":"A9" ,"mard":"E4" ,"rgb":"ee78ac" ,"type":""},
+        {"mm":"A10" ,"mard":"E5" ,"rgb":"f653a6" ,"type":""},        
+        {"mm":"A11" ,"mard":"E6" ,"rgb":"fd2f81" ,"type":""},        
+        {"mm":"A12" ,"mard":"E7" ,"rgb":"a2176a" ,"type":""},        
+        {"mm":"A13" ,"mard":"E8" ,"rgb":"ffd8e8" ,"type":""},        
+        {"mm":"A14" ,"mard":"E9" ,"rgb":"ea8cda" ,"type":""},        
+        {"mm":"A15" ,"mard":"F9" ,"rgb":"e67088" ,"type":""},        
+        {"mm":"A16" ,"mard":"E10" ,"rgb":"bf3974" ,"type":""},       
+        {"mm":"A17" ,"mard":"F8" ,"rgb":"bb082f" ,"type":""},        
+        {"mm":"A18" ,"mard":"A12" ,"rgb":"fdbc9e" ,"type":""},       
+        {"mm":"A19" ,"mard":"E11" ,"rgb":"fee7e2" ,"type":""},       
+        {"mm":"A20" ,"mard":"E12" ,"rgb":"fcafdd" ,"type":""},       
+        {"mm":"A21" ,"mard":"E13" ,"rgb":"a61284" ,"type":""},       
+        {"mm":"A22" ,"mard":"F12" ,"rgb":"f9425e" ,"type":""},       
+        {"mm":"A23" ,"mard":"E15" ,"rgb":"f3d1d7" ,"type":""},       
+        {"mm":"A24" ,"mard":"F13" ,"rgb":"d14b30" ,"type":""},       
+        {"mm":"A25" ,"mard":"F14" ,"rgb":"fdaca9" ,"type":""},       
+        {"mm":"B1" ,"mard":"A2" ,"rgb":"ffffcc" ,"type":""},
+        {"mm":"B2" ,"mard":"A3" ,"rgb":"fff297" ,"type":""},
+        {"mm":"B3" ,"mard":"A4" ,"rgb":"fff651" ,"type":""},
+        {"mm":"B4" ,"mard":"A5" ,"rgb":"ffdb4d" ,"type":""},
+        {"mm":"B5" ,"mard":"A6" ,"rgb":"fcc73b" ,"type":""},
+        {"mm":"B6" ,"mard":"A7" ,"rgb":"fe8443" ,"type":""},
+        {"mm":"B7" ,"mard":"G5" ,"rgb":"f2a76d" ,"type":""},
+        {"mm":"B8" ,"mard":"G6" ,"rgb":"ee9867" ,"type":""},
+        {"mm":"B9" ,"mard":"G10" ,"rgb":"bf9143" ,"type":""},        
+        {"mm":"B10" ,"mard":"A8" ,"rgb":"e5c62d" ,"type":""},        
+        {"mm":"B11" ,"mard":"A9" ,"rgb":"fbaa72" ,"type":""},        
+        {"mm":"B12" ,"mard":"A10" ,"rgb":"fd9443" ,"type":""},       
+        {"mm":"B13" ,"mard":"A13" ,"rgb":"fec667" ,"type":""},       
+        {"mm":"B14" ,"mard":"A14" ,"rgb":"ff7443" ,"type":""},       
+        {"mm":"B15" ,"mard":"A15" ,"rgb":"fbf65e" ,"type":"tran"},   
+        {"mm":"C1" ,"mard":"B1" ,"rgb":"eaf149" ,"type":""},
+        {"mm":"C2" ,"mard":"B2" ,"rgb":"b6eb45" ,"type":""},
+        {"mm":"C3" ,"mard":"B4" ,"rgb":"51ff51" ,"type":""},
+        {"mm":"C4" ,"mard":"B5" ,"rgb":"6fd363" ,"type":""},
+        {"mm":"C5" ,"mard":"B8" ,"rgb":"13904c" ,"type":""},
+        {"mm":"C6" ,"mard":"B9" ,"rgb":"28523a" ,"type":""},
+        {"mm":"C7" ,"mard":"B3" ,"rgb":"9af5a8" ,"type":""},
+        {"mm":"C8" ,"mard":"C1" ,"rgb":"e0ffe2" ,"type":""},
+        {"mm":"C9" ,"mard":"B6" ,"rgb":"79ebc7" ,"type":""},
+        {"mm":"C10" ,"mard":"B7" ,"rgb":"3bb48b" ,"type":""},        
+        {"mm":"C11" ,"mard":"B10" ,"rgb":"ace1d9" ,"type":""},       
+        {"mm":"C12" ,"mard":"B11" ,"rgb":"52641d" ,"type":""},       
+        {"mm":"C13" ,"mard":"B12" ,"rgb":"206a4f" ,"type":""},       
+        {"mm":"C14" ,"mard":"B13" ,"rgb":"c7ff85" ,"type":""},       
+        {"mm":"C15" ,"mard":"B14" ,"rgb":"d0ed39" ,"type":""},       
+        {"mm":"C16" ,"mard":"B15" ,"rgb":"205726" ,"type":""},       
+        {"mm":"C17" ,"mard":"B16" ,"rgb":"ccffaa" ,"type":""},       
+        {"mm":"C18" ,"mard":"B17" ,"rgb":"b6c130" ,"type":""},       
+        {"mm":"C19" ,"mard":"B18" ,"rgb":"e4f954" ,"type":""},       
+        {"mm":"D1" ,"mard":"C2" ,"rgb":"b9f6ed" ,"type":""},
+        {"mm":"D2" ,"mard":"C3" ,"rgb":"a8e1fc" ,"type":""},
+        {"mm":"D3" ,"mard":"C4" ,"rgb":"84d2ff" ,"type":""},
+        {"mm":"D4" ,"mard":"C6" ,"rgb":"78bdf8" ,"type":""},
+        {"mm":"D5" ,"mard":"D1" ,"rgb":"b9cffe" ,"type":""},
+        {"mm":"D6" ,"mard":"D2" ,"rgb":"9ca6db" ,"type":""},
+        {"mm":"D7" ,"mard":"C5" ,"rgb":"24b9e4" ,"type":""},
+        {"mm":"D8" ,"mard":"C7" ,"rgb":"3c8aec" ,"type":""},
+        {"mm":"D9" ,"mard":"C8" ,"rgb":"195dc4" ,"type":""},
+        {"mm":"D10" ,"mard":"D3" ,"rgb":"224eb1" ,"type":""},        
+        {"mm":"D11" ,"mard":"D4" ,"rgb":"2e4770" ,"type":""},        
+        {"mm":"D12" ,"mard":"D7" ,"rgb":"7e4dc7" ,"type":""},        
+        {"mm":"D13" ,"mard":"D5" ,"rgb":"c56fb8" ,"type":""},        
+        {"mm":"D14" ,"mard":"D6" ,"rgb":"aa76e4" ,"type":""},        
+        {"mm":"D15" ,"mard":"D10" ,"rgb":"351d4f" ,"type":""},       
+        {"mm":"D16" ,"mard":"D8" ,"rgb":"e0cdff" ,"type":""},        
+        {"mm":"D17" ,"mard":"D9" ,"rgb":"c9befd" ,"type":""},        
+        {"mm":"D18" ,"mard":"D15" ,"rgb":"46297d" ,"type":""},       
+        {"mm":"D19" ,"mard":"D11" ,"rgb":"c1c2ff" ,"type":""},       
+        {"mm":"D20" ,"mard":"D12" ,"rgb":"daafe4" ,"type":""},       
+        {"mm":"D21" ,"mard":"D13" ,"rgb":"c64dae" ,"type":""},       
+        {"mm":"D22" ,"mard":"D14" ,"rgb":"9735b3" ,"type":""},       
+        {"mm":"D23" ,"mard":"D16" ,"rgb":"e3e4ff" ,"type":""},       
+        {"mm":"D24" ,"mard":"D17" ,"rgb":"c9d9fd" ,"type":""},       
+        {"mm":"D25" ,"mard":"C10" ,"rgb":"30d9ed" ,"type":""},       
+        {"mm":"D26" ,"mard":"C12" ,"rgb":"1a3758" ,"type":""},       
+        {"mm":"D27" ,"mard":"D18" ,"rgb":"b87bd5" ,"type":""},       
+        {"mm":"D28" ,"mard":"C11" ,"rgb":"00c4d0" ,"type":""},       
+        {"mm":"D29" ,"mard":"C14" ,"rgb":"e0fff9" ,"type":""},       
+        {"mm":"D30" ,"mard":"C13" ,"rgb":"b4d7ff" ,"type":""},       
+        {"mm":"D31" ,"mard":"C15" ,"rgb":"00cbd2" ,"type":""},       
+        {"mm":"D32" ,"mard":"C16" ,"rgb":"0a5491" ,"type":""},       
+        {"mm":"D33" ,"mard":"D19" ,"rgb":"e8cbfa" ,"type":""},       
+        {"mm":"D34" ,"mard":"D20" ,"rgb":"a73ae9" ,"type":""},       
+        {"mm":"D35" ,"mard":"D21" ,"rgb":"8b339b" ,"type":""},       
+        {"mm":"D36" ,"mard":"C17" ,"rgb":"7be7f4" ,"type":""},       
+        {"mm":"E1" ,"mard":"E1" ,"rgb":"ffd1cc" ,"type":""},
+        {"mm":"E2" ,"mard":"A1" ,"rgb":"fff5ca" ,"type":""},
+        {"mm":"E3" ,"mard":"G1" ,"rgb":"fee5c7" ,"type":""},
+        {"mm":"E4" ,"mard":"G2" ,"rgb":"fcceb7" ,"type":""},
+        {"mm":"E5" ,"mard":"G3" ,"rgb":"f9c2a4" ,"type":""},
+        {"mm":"E6" ,"mard":"G4" ,"rgb":"dcb99a" ,"type":""},
+        {"mm":"E7" ,"mard":"G7" ,"rgb":"91664e" ,"type":""},
+        {"mm":"E8" ,"mard":"G8" ,"rgb":"4d312c" ,"type":""},
+        {"mm":"E9" ,"mard":"F6" ,"rgb":"b53710" ,"type":""},
+        {"mm":"E10" ,"mard":"G9" ,"rgb":"eabb85" ,"type":""},        
+        {"mm":"E11" ,"mard":"A11" ,"rgb":"ffcf7c" ,"type":""},       
+        {"mm":"E12" ,"mard":"G11" ,"rgb":"e4c896" ,"type":""},       
+        {"mm":"E13" ,"mard":"G12" ,"rgb":"ddb986" ,"type":""},       
+        {"mm":"E14" ,"mard":"G14" ,"rgb":"856a54" ,"type":""},       
+        {"mm":"E15" ,"mard":"F10" ,"rgb":"8c420c" ,"type":""},       
+        {"mm":"E16" ,"mard":"F11" ,"rgb":"6f3329" ,"type":""},       
+        {"mm":"E17" ,"mard":"G13" ,"rgb":"d19058" ,"type":""},       
+        {"mm":"E18" ,"mard":"H12" ,"rgb":"fff2e2" ,"type":""},       
+        {"mm":"E19" ,"mard":"G15" ,"rgb":"f5f3dc" ,"type":""},       
+        {"mm":"E20" ,"mard":"G16" ,"rgb":"f2dfce" ,"type":""},       
+        {"mm":"E21" ,"mard":"E14" ,"rgb":"fdd2bf" ,"type":""},       
+        {"mm":"E22" ,"mard":"G17" ,"rgb":"5d5249" ,"type":""},       
+        {"mm":"E23" ,"mard":"H13" ,"rgb":"ece1cb" ,"type":""},       
+        {"mm":"F1" ,"mard":"H1" ,"rgb":"fefefe" ,"type":""},
+        {"mm":"F2" ,"mard":"H2" ,"rgb":"ffffff" ,"type":""},
+        {"mm":"F3" ,"mard":"H3" ,"rgb":"aeaeae" ,"type":""},
+        {"mm":"F4" ,"mard":"H4" ,"rgb":"979296" ,"type":""},
+        {"mm":"F5" ,"mard":"H5" ,"rgb":"606060" ,"type":""},
+        {"mm":"F6" ,"mard":"H6" ,"rgb":"353537" ,"type":""},
+        {"mm":"F7" ,"mard":"H7" ,"rgb":"000000" ,"type":""},
+        {"mm":"F8" ,"mard":"H8" ,"rgb":"f7e6f0" ,"type":""},
+        {"mm":"F9" ,"mard":"H10" ,"rgb":"e5e2f3" ,"type":""},        
+        {"mm":"F10" ,"mard":"H9" ,"rgb":"e6e3dc" ,"type":""},        
+        {"mm":"F11" ,"mard":"H11" ,"rgb":"cecdcb" ,"type":""},       
+        {"mm":"F12" ,"mard":"H14" ,"rgb":"c5ced8" ,"type":""},       
+        {"mm":"L2" ,"mard":"R10" ,"rgb":"f8da54" ,"type":"tran"},    
+        {"mm":"L6" ,"mard":"T1" ,"rgb":"fcfdff" ,"type":"tran"},     
+        {"mm":"L7" ,"mard":"R13" ,"rgb":"56534e" ,"type":"tran"},    
+        {"mm":"P1" ,"mard":"P1" ,"rgb":"f9f9f9" ,"type":"tran"},     
+        {"mm":"P2" ,"mard":"P2" ,"rgb":"ababab" ,"type":"tran"},     
+        {"mm":"P3" ,"mard":"P5" ,"rgb":"eb903f" ,"type":"tran"},     
+        {"mm":"P4" ,"mard":"P3" ,"rgb":"b6dbaf" ,"type":"tran"},     
+        {"mm":"P5" ,"mard":"P4" ,"rgb":"fea2a3" ,"type":"tran"},     
+        {"mm":"P6" ,"mard":"P7" ,"rgb":"e79273" ,"type":"tran"},     
+        {"mm":"P7" ,"mard":"P8" ,"rgb":"ecdb59" ,"type":"tran"},     
+        {"mm":"P8" ,"mard":"P6" ,"rgb":"63cea2" ,"type":"tran"},     
+        {"mm":"T1" ,"mard":"R1" ,"rgb":"d40e1f" ,"type":"tran"},     
+        {"mm":"T2" ,"mard":"R9" ,"rgb":"945ab1" ,"type":"tran"},     
+        {"mm":"T3" ,"mard":"R8" ,"rgb":"1960c8" ,"type":"tran"},     
+        {"mm":"T4" ,"mard":"R6" ,"rgb":"1eba93" ,"type":"tran"},     
+        {"mm":"T5" ,"mard":"R7" ,"rgb":"1d779c" ,"type":"tran"},     
+        {"mm":"T6" ,"mard":"R11" ,"rgb":"fcecf7" ,"type":"tran"},    
+        {"mm":"T7" ,"mard":"R12" ,"rgb":"d8d4d3" ,"type":"tran"},    
+        {"mm":"Y1" ,"mard":"Y1" ,"rgb":"ff6fb7" ,"type":"tran"},     
+        {"mm":"Y2" ,"mard":"Y2" ,"rgb":"fdb583" ,"type":"tran"},     
+        {"mm":"Y3" ,"mard":"Y3" ,"rgb":"d8fca4" ,"type":"tran"},     
+        {"mm":"Y4" ,"mard":"Y4" ,"rgb":"91dafb" ,"type":"tran"},     
+        {"mm":"Y5" ,"mard":"Y5" ,"rgb":"e987ea" ,"type":"tran"},     
+        {"mm":"YX1" ,"mard":"M6" ,"rgb":"c8b999" ,"type":""},        
+        {"mm":"YX2" ,"mard":"M3" ,"rgb":"718898" ,"type":""},        
+        {"mm":"YX3" ,"mard":"M14" ,"rgb":"c0725d" ,"type":""},       
+        {"mm":"YX4" ,"mard":"M11" ,"rgb":"9b809f" ,"type":""},       
+        {"mm":"YX5" ,"mard":"M12" ,"rgb":"5a474c" ,"type":""},       
+        {"mm":"YX6" ,"mard":"M5" ,"rgb":"dbd6b6" ,"type":""},        
+        {"mm":"YX7" ,"mard":"M15" ,"rgb":"86848a" ,"type":""},       
+        {"mm":"YX8" ,"mard":"M13" ,"rgb":"dda89a" ,"type":""},       
+        {"mm":"YX9" ,"mard":"M10" ,"rgb":"bb9fb9" ,"type":""},       
+        {"mm":"YX10" ,"mard":"M9" ,"rgb":"ab9787" ,"type":""},       
+        {"mm":"YX11" ,"mard":"M1" ,"rgb":"ccd7c9" ,"type":""},       
+        {"mm":"YX12" ,"mard":"M2" ,"rgb":"91aa94" ,"type":""},       
+        {"mm":"YX13" ,"mard":"M7" ,"rgb":"c1aca7" ,"type":""},       
+        {"mm":"YX14" ,"mard":"M8" ,"rgb":"b09699" ,"type":""},       
+        {"mm":"YX15" ,"mard":"M4" ,"rgb":"dacec2" ,"type":""}, 
+    ]}
+</script>
