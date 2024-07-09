@@ -252,9 +252,9 @@
                 let brightness = Math.sqrt(0.299 * r * r + 0.587 * g * g + 0.114 * b * b) / 255;
                 if(brightness<0.5){
                     // 设置文本颜色
-                    ctx.fillStyle = '#000000'; // 设置填充颜色
-                }else{
                     ctx.fillStyle = '#ffffff'; // 设置填充颜色
+                }else{
+                    ctx.fillStyle = '#000000'; // 设置填充颜色
                 }
 
                 let mm_code=similarityLists[i][0].mm
