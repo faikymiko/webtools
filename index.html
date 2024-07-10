@@ -650,22 +650,21 @@
     const urlParams = new URLSearchParams(window.location.search);
     let imgBase64Param = urlParams.get('img_base64') || '';
 
-    
-
     // 辅助函数：更新 URL 参数
     function updateQueryStringParameter(uri, key, value) {
         const re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
         const separator = uri.indexOf('?') !== -1 ? "&" : "?";
         if (uri.match(re)) {
-            return uri.replace(re, '$1' + key + "=" + value + '$2');
+            return uri.replace(re, '$1' + key + "=" + encodeURIComponent(value) + '$2');
         } else {
-            return uri + separator + key + "=" + value;
+            return uri + separator + key + "=" + encodeURIComponent(value);
         }
     }
 
     function update_img_arg_to_url(){
-        const newUrl = updateQueryStringParameter(window.location.href, 'img_base64', document.getElementById("base64Text").value);
-        history.pushState({ img_base64: imgBase64Param }, '', newUrl);
+        const base64Text = document.getElementById("base64Text").value;
+        const newUrl = updateQueryStringParameter(window.location.href, 'img_base64', base64Text);
+        history.pushState({ img_base64: base64Text }, '', newUrl);
     }
     
     
