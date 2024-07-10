@@ -392,15 +392,18 @@
             // 获取 Base64 数据
             let base64String = temp_canvas.toDataURL('image/png');  // 可以指定图片格式，如 'image/jpeg' 或 'image/png'
 
-            base64Text.value = base64String
+            document.getElementById("base64Text").value = base64String
 
             document.getElementById('org_size_sp_i').innerText=org_img.width+" x "+org_img.height
+            
+            update_img_arg_to_url()
+
             processImage()
         });
 
         const loadImageBtn = document.getElementById('loadImage');
         loadImageBtn.addEventListener('click', () => {
-            const dataURL = base64Text.value;
+            const dataURL = document.getElementById("base64Text").value;
             if (dataURL) {
                 img.onload = () => {
                     canvas.width = 800; // 固定画布宽度为800
@@ -642,7 +645,44 @@
         console.log(result);
 
     }
+
+    // 获取当前 URL 参数
+    const urlParams = new URLSearchParams(window.location.search);
+    let imgBase64Param = urlParams.get('img_base64') || '';
+
     
+
+    // 辅助函数：更新 URL 参数
+    function updateQueryStringParameter(uri, key, value) {
+        const re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+        const separator = uri.indexOf('?') !== -1 ? "&" : "?";
+        if (uri.match(re)) {
+            return uri.replace(re, '$1' + key + "=" + value + '$2');
+        } else {
+            return uri + separator + key + "=" + value;
+        }
+    }
+
+    function update_img_arg_to_url(){
+        const newUrl = updateQueryStringParameter(window.location.href, 'img_base64', document.getElementById("base64Text").value);
+        history.pushState({ img_base64: imgBase64Param }, '', newUrl);
+    }
+    
+    
+    // 页面加载时执行的函数
+    window.onload = function() {
+        // 获取 URL 参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const imgBase64Param = urlParams.get('img_base64');
+
+        // 如果存在 img_base64 参数，则设置到 textarea 中
+        if (imgBase64Param) {
+            const base64Textarea = document.getElementById('base64Text');
+            base64Textarea.value = imgBase64Param;
+        }
+    }
+
+
         
     </script>
 </body>
