@@ -90,6 +90,15 @@
                     
                     <label for="tag_input_i">标签:</label>
                     <input type="checkbox" id="tag_input_i" name="tag_input_n" onchange="handleChange()" checked>
+                
+                    <label for="count_grid_input_i">计数网格:</label>
+                    <input type="checkbox" id="count_grid_input_i" name="count_grid_input_n" onchange="handleChange()">
+                
+                
+
+                    <label for="BeanedImg_input_i">预览:</label>
+                    <input type="checkbox" id="BeanedImg_input_i" name="BeanedImg_input_n" onchange="handleChange()">
+
                 </div>
             </div>
             <div id="bean_color_div_i">
@@ -110,6 +119,7 @@
         let startX, startY;
         let lastTouchDistance = null;
         let cell_size=1
+        let CountGrid_size = 5
 
         let rgb_list = [];
         let color_count = {};
@@ -151,7 +161,7 @@
         });
     
                 // Draw image
-        function drawImage() {
+        function drawImage(event) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.translate(originX, originY);
@@ -163,6 +173,15 @@
             // 获取图像的实际尺寸
             const imageWidth = img.width;
             const imageHeight = img.height;
+
+
+            let BeanedImgRadio = document.getElementById('BeanedImg_input_i');
+            // 检查单选按钮是否被选中
+            if (BeanedImgRadio.checked) {
+                //绘制预览
+                drawBeanedImg(x,y);
+            }
+
 
             let gridRadio = document.getElementById('grid_input_i');
             // 检查单选按钮是否被选中
@@ -180,7 +199,19 @@
                 //绘制标签
                 drawTag(x,y)
             }
+
+
+            let countGridRadio = document.getElementById('count_grid_input_i');
+            // 检查单选按钮是否被选中
+            if (countGridRadio.checked) {
+                //绘制网格线
+                drawCountGrid(x,y);
+            }
                 
+
+            
+
+            console.log("event",event)
 
             ctx.restore();
 
@@ -194,8 +225,6 @@
             ctx.strokeStyle = '#00000033';  // 设置线条颜色为浅灰色
             ctx.lineWidth = 0.1;  // 设置线条粗细为1像素
             
-            
-
             // 绘制水平线条
             for (let y = 0; y < img.height+1; y += cell_size) {
                 ctx.beginPath();
@@ -211,6 +240,7 @@
                 ctx.lineTo(o_x+x, o_y+img.height);
                 ctx.stroke();
             }
+            
         }
 
         function drawCellXY(o_x,o_y) {
@@ -240,14 +270,14 @@
             
             
             i=0
-            Object.keys(color_pos).forEach(color => {
+            Object.keys(color_pos).forEach(color_with_A => {
                 // console.log(`Color: ${color}`);
                 ctx.font = '0.45px Arial'; // 设置字体大小和字体类型
                 
                 // 将颜色值转换为 RGB
-                let r = parseInt(color.substr(0, 2), 16);
-                let g = parseInt(color.substr(2, 2), 16);
-                let b = parseInt(color.substr(4, 2), 16);
+                let r = parseInt(color_with_A.substr(0, 2), 16);
+                let g = parseInt(color_with_A.substr(2, 2), 16);
+                let b = parseInt(color_with_A.substr(4, 2), 16);
                 // 计算亮度
                 let brightness = Math.sqrt(0.299 * r * r + 0.587 * g * g + 0.114 * b * b) / 255;
                 if(brightness<0.5){
@@ -256,10 +286,18 @@
                 }else{
                     ctx.fillStyle = '#000000'; // 设置填充颜色
                 }
+                select_i=0
+                document.querySelectorAll(`input[name="${color_with_A}_similarColorRadio_group"]`).forEach(input => {
+                    if(input.checked){
+                        console.log(input.id)
+                        console.log(input.id.split("_")[1])
+                        select_i=input.id.split("_")[1]
+                    }
+                });
 
-                let mm_code=similarityLists[i][0].mm
+                let mm_code=similarityLists[i][select_i].mm
 
-                color_pos[color].forEach(pos => {
+                color_pos[color_with_A].forEach(pos => {
                     // console.log(`Position: x = ${pos.x}, y = ${pos.y}`);
 
 
@@ -270,24 +308,78 @@
                 i=i+1
             });
 
-            
-
-            // // 绘制水平线条
-            // for (let y = 0; y < img.height+1; y += cell_size) {
-            //     ctx.beginPath();
-            //     ctx.moveTo(o_x+0, o_y+y);
-            //     ctx.lineTo(o_x+img.width, o_y+y);
-            //     ctx.stroke();
-            // }
-            
-            // // 绘制垂直线条
-            // for (let x = 0; x < img.width+1; x += cell_size) {
-            //     ctx.beginPath();
-            //     ctx.moveTo(o_x+x, o_y+0);
-            //     ctx.lineTo(o_x+x, o_y+img.height);
-            //     ctx.stroke();
-            // }
         }
+
+        function drawCountGrid(o_x,o_y) {
+            ctx.strokeStyle = '#FF000077';  // 设置线条颜色为浅灰色
+            ctx.lineWidth = 0.1;  // 设置线条粗细为1像素
+            
+            // 绘制水平线条
+            for (let y = 0; y < img.height+1; y +=  CountGrid_size) {
+                ctx.beginPath();
+                ctx.moveTo(o_x+0, o_y+y);
+                ctx.lineTo(o_x+img.width, o_y+y);
+                ctx.stroke();
+            }
+            
+            // 绘制垂直线条
+            for (let x = 0; x < img.width+1; x +=  CountGrid_size) {
+                ctx.beginPath();
+                ctx.moveTo(o_x+x, o_y+0);
+                ctx.lineTo(o_x+x, o_y+img.height);
+                ctx.stroke();
+            }
+
+        }
+
+        function drawBeanedImg(o_x,o_y) {
+            function setPixel(x, y, color_with_A) {
+                // 解析 RGBA 值
+                let r = parseInt(color_with_A.substr(0, 2), 16);
+                let g = parseInt(color_with_A.substr(2, 2), 16);
+                let b = parseInt(color_with_A.substr(4, 2), 16);
+                let a = parseInt(color_with_A.substr(6, 2), 16) / 255; // 转换到 0-1 之间
+
+                // 设置填充颜色
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+
+                // 绘制 1x1 像素的矩形
+                ctx.fillRect(x, y, 1, 1);
+
+                // console.log(x , y)
+            }
+        
+            i=0
+            Object.keys(color_pos).forEach(color_with_A => {
+                // console.log(`Color: ${color}`);
+                
+                
+                document.querySelectorAll(`input[name="${color_with_A}_similarColorRadio_group"]`).forEach(input => {
+                    if(input.checked){
+                        console.log(input.id)
+                        console.log(input.id.split("_")[1])
+                        select_i=input.id.split("_")[1]
+                    }
+                });
+
+                let bean_rgb=similarityLists[i][select_i].rgb
+
+                color_pos[color_with_A].forEach(pos => {
+
+                    setPixel(o_x+pos.x , o_y+pos.y, bean_rgb+"ff")
+
+                });
+
+                i=i+1
+            });
+
+        }
+
+
+
+
+
+
     
         // Calculate distance between two touch points
         function getTouchDistance(touches) {
@@ -603,32 +695,77 @@
                 originalColorBlock.style.backgroundColor = `#${color}`;
                 originalColorBlock.style.marginRight = "10px";
 
+
                 colorBlock.appendChild(CountText)
                 colorBlock.appendChild(originalColorText)
                 colorBlock.appendChild(originalColorBlock);
 
+                let index = 0;
                 similarityList.forEach(similarity => {
+                    let similarColorComp = document.createElement("div");
+                    similarColorComp.id = color_with_A + "_" + index + "_similarColorComp_div_i";
+                    similarColorComp.style.display = "flex";
+                    similarColorComp.style.alignItems = "center";
+                    similarColorComp.style.marginRight = "2px";
+                    
+
+                    let similarColorRadio = document.createElement("input");
+                    similarColorRadio.type = "radio"; // 改为单选框
+                    similarColorRadio.id = `${color_with_A}_${index}_similarColorRadio_div_i`;
+                    similarColorRadio.name = `${color_with_A}_similarColorRadio_group`; // 同一组的单选框需设置相同的name
+                    similarColorRadio.style.display = "none"; // 隐藏单选框
+                    // 初始状态设置第一个为选中
+                    if (index === 0) {
+                        similarColorRadio.checked = true;
+                        similarColorComp.style.border = "1px solid #ff0000ff"; // 设置为选中边框颜色
+                    }
+
+                    // 添加点击事件监听器
+                    similarColorComp.addEventListener('click', function() {
+                        old_Radio_checked = similarColorRadio.checked
+                        similarColorRadio.checked = true; // 点击时设置单选框为选中状态
+
+                        // console.log("similarColorRadio",similarColorRadio.id)
+                        // 取消其他单选框的选中状态
+                        document.querySelectorAll(`input[name="${color_with_A}_similarColorRadio_group"]`).forEach(input => {
+                            let parentDiv = input.closest('div');
+                            // console.log(input,input.checked)
+                            parentDiv.style.border = "none"; // 取消其他选中单选框的边框颜色
+                        });
+                        similarColorComp.style.border = "1px solid #ff0000ff"; // 设置当前选中的单选框边框颜色
+                        // console.log("similarColorComp",similarColorComp.id)
+
+                        if(!old_Radio_checked){
+                            handleChange()
+                        }
+                        
+                    });
+
                     let similarColorBlock = document.createElement("div");
                     similarColorBlock.style.width = "20px";
                     similarColorBlock.style.height = "20px";
                     similarColorBlock.style.backgroundColor = `#${similarity.rgb}`;
                     similarColorBlock.style.marginRight = "2px";
-                    
 
-                    let bean_code = document.createElement("span");
-                    bean_code.textContent =(similarity.similarity.toFixed(2)*100).toFixed(0);
-                    bean_code.style.fontSize = "4px"
-                    bean_code.style.marginLeft = "2px";
-                    similarColorBlock.appendChild(bean_code)
+                    let similarityPercent = document.createElement("span");
+                    similarityPercent.textContent = (similarity.similarity.toFixed(2) * 100).toFixed(0);
+                    similarityPercent.style.fontSize = "4px";
+                    similarityPercent.style.marginLeft = "2px";
+                    similarityPercent.style.color = "white"; // 设置字体颜色为白色
+                    similarityPercent.style.textShadow = "1px 1px 2px black"; // 设置包边效果
+                    similarColorBlock.appendChild(similarityPercent);
 
-                    let similarityText = document.createElement("span");
-                    similarityText.textContent = similarity.mm;
-                    similarityText.style.fontSize = "10px"
-                    similarityText.style.marginRight = "3px";
+                    let similarityLabel = document.createElement("span");
+                    similarityLabel.textContent = similarity.mm;
+                    similarityLabel.style.fontSize = "10px";
+                    similarityLabel.style.marginRight = "3px";
 
-                    colorBlock.appendChild(similarColorBlock);
-                    // colorBlock.appendChild(bean_code);
-                    colorBlock.appendChild(similarityText);
+                    similarColorComp.appendChild(similarColorBlock);
+                    similarColorComp.appendChild(similarityLabel);
+                    similarColorComp.appendChild(similarColorRadio);
+
+                    colorBlock.appendChild(similarColorComp);
+                    index++;
                 });
 
                 similarColorsDiv.appendChild(colorBlock);
