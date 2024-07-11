@@ -394,7 +394,7 @@
                 const touchDistance = getTouchDistance(event.touches);
                 if (lastTouchDistance) {
                     const delta = touchDistance - lastTouchDistance;
-                    const zoomFactor = delta > 0 ? 1.1 : 0.9;
+                    const zoomFactor = delta > 0 ? 1.02 : 0.98;
                     const mouseX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
                     const mouseY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
     
