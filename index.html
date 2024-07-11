@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Image Zoom and Pan with Canvas</title>
         <style>
+            *{
+                font-family:"仿宋_GB2312";
+                font-weight: 900;
+            }
+
             body {
                 display: flex;
                 justify-content: center;
@@ -12,18 +17,18 @@
                 height: 100vh;
                 margin: 0;
                 overflow: hidden; /* 防止页面超出屏幕 */
+                background-image: url("https://zh.stardewvalleywiki.com/mediawiki/extensions/StardewValley/images/stardewbackground.png");
             }
             #container {
                 position: relative;
                 width: 800px; /* 限制显示区域的宽度 */
                 height: 800px; /* 限制显示区域的高度 */
                 overflow: hidden; /* 隐藏超出显示区域的部分 */
-            }
-            #canvas {
-                border: 1px solid black;
-                touch-action: none; /* 防止默认触摸动作 */
-                width: 800px; /* 设置画布显示宽度 */
-                height: 800px; /* 设置画布显示高度 */
+
+                border: 15px solid transparent;
+                border-image:url('/asstes/menu_border.png') 15 stretch;
+                box-sizing: border-box;
+
             }
             #right-panel {
                 display: flex;
@@ -31,7 +36,10 @@
                 justify-content: space-between;
                 margin-left: 20px;
                 height: 100%;
-                max-height: 800px;
+                max-height: 700px;
+
+                width: 350px; /*设置固定宽度*/
+                overflow: hidden; /* 隐藏超出部分 */
             }
             #controls {
                 display: flex;
@@ -45,12 +53,13 @@
                 margin-bottom: 20px;
             }
             #checkboxes {
+                display: flex;
+                flex-wrap: wrap; /* 允许换行 */
                 margin-bottom: 20px;
             }
             #bean_color_div_i {
                 width: 400px; /* 设置右侧div宽度 */
                 height: 400px; /* 设置右侧div高度 */
-                border: 1px solid #ccc;
                 overflow-x: auto;
                 overflow-y: auto;
             }
@@ -67,38 +76,218 @@
             button {
                 margin-top: 10px;
             }
+
+            .checkbox_0{
+                
+                background-image: url('/asstes/checkbox_btn_1.png');
+                background-repeat: no-repeat;
+                background-position: center;
+                vertical-align: middle;
+
+                display: -webkit-flex; /* Safari */
+                display: flex;
+                justify-content:center;
+                align-items:center;
+
+
+                margin-bottom: 5px;
+                margin-left: 5px;
+
+            }
+
+            input[type="checkbox"]:checked + .checkbox_0{
+                background-image: url('/asstes/checkbox_btn_2.png');
+            }
+
+            .offset-0{
+                transform: translate(0,-0.2rem);
+            }
+
+            input[type="checkbox"]:checked + .checkbox_0 > .offset-0{
+                transform: translate(0, 0rem);
+            }
+
+            .bg_img_with{
+                background-repeat: no-repeat;
+                background-position: center;
+                vertical-align: middle;
+
+                display: -webkit-flex; /* Safari */
+                display: flex;
+                justify-content:center;
+                align-items:center;
+            }
+
+            .btn-0{
+                background: transparent;
+                border: none;
+                background-image: url('/asstes/btn_1.png');
+                
+            }
+            .btn-0:active{
+                background: transparent;
+                border: none;
+                background-image: url('/asstes/btn_2.png');
+            }
+            .btn-0:active > .offset-0{
+                transform: translate(0, 0rem);
+            }
+
+            #canvas{
+
+                border: 1px solid black;
+                touch-action: none; /* 防止默认触摸动作 */
+                width: 800px; /* 设置画布显示宽度 */
+                height: 800px; /* 设置画布显示高度 */
+                flex-shrink: 0; /*防止 canvas 缩小*/
+
+                background: #fff;
+                /* background-image: url("asstes/fake_tran_bg.png"); */
+                min-width: 500px;
+                min-height: 500px;
+
+                
+
+                
+            }
+
+            input[type="checkbox"]:checked + .checkbox_0{
+                
+                background-image: url('/asstes/checkbox_btn_2.png');
+            }
+
+            .flex_hz{
+                display: flex;
+            }
+
+            .flex_xy_Center{
+                justify-content:center ;
+                align-items:center;
+            }
+
+            .flex_grow{
+                flex-grow: 1;
+            }
+
+            /* 隐藏滚动条 */
+            .flex-scroll::-webkit-scrollbar {
+                display: none;
+            }
+
+            /* 对 Firefox 浏览器隐藏滚动条 */
+            .flex-scroll {
+                -ms-overflow-style: none;  /* 适用于 IE 和 Edge */
+                scrollbar-width: none;  /* 适用于 Firefox */
+            }
+
+            .margin_5px{
+                margin: 5px;
+            }
+
+        </style>
+        <style>
+            /* 去除默认样式 */
+             textarea {
+               border: none;
+               outline: none;
+               padding: 0;
+               margin: 0;
+               -webkit-appearance: none;
+               -moz-appearance: none;
+               appearance: none;
+               background-image: none;
+               background-color: transparent;
+               font-size: inherit;
+               width: 100%;
+                overflow: hidden;
+             }
+            
+             textarea:focus {
+               outline: none;
+             }
+            
+             /* 自定义样式 */
+             .mo-textarea {
+               display: inline-block;
+               resize: vertical;
+               padding: 5px 15px;
+               line-height: 1.5;
+               box-sizing: border-box;
+               color: #606266;
+               background-color: #fff;
+               border: 1px solid #dcdfe6;
+               border-radius: 4px;
+               transition: border-color 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+             }
+            
+             /* 提示文字 */
+             .mo-textarea::placeholder {
+               color: #c0c4cc;
+             }
+            
+             /* 鼠标hover */
+             .mo-textarea:hover {
+               border-color: #c0c4cc;
+             }
+            
+             /* 获得焦点 */
+             .mo-textarea:focus {
+               border-color: #3677f0;
+             }
         </style>
     </head>
     <body>
-        <div id="container">
+        <div id="container" >
             <canvas id="canvas"></canvas>
         </div>
         <div id="right-panel">
-            <div id="controls">
-                <div id="upload-section">
-                    <input type="file" id="imageLoader" accept="image/*" />
-                    <textarea id="base64Text" placeholder="在此处粘贴base64格式的图片文本"></textarea>
-                    <div>
-                        <button id="saveImage">生成文本(刷新1)</button>
-                        <button id="loadImage">文本导入(刷新2)</button>
-                    </div>
-                    <div>原图大小:<span id="org_size_sp_i">null*null</span>(大于300px运行缓慢)</div>
+            <!-- <div id="controls_tab" class="flex_hz">
+                <div>
+                    <input type="radio" id="tab_btn_0_radio_i" name="tab_btn_group" checked/>
+                    <label for="tab_btn_0_radio_i" class=" bg_img_with"></label>
                 </div>
-                <div id="checkboxes">
-                    <label for="grid_input_i">网格:</label>
-                    <input type="checkbox" id="grid_input_i" name="grid_input_n" onchange="handleChange()">
+                <div>
+                    <input type="radio" id="tab_btn_0_radio_i" name="tab_btn_group"/>
+                    <label for="tab_btn_0_radio_i" class=" bg_img_with"></label>
+                </div>
+            </div> -->
+            <div id="controls">
+                <div id="upload-section" class="flex_xy_Center">
+                    <div class="flex_hz flex_xy_Center">
+                        <label for="imageLoader" class="btn-0 bg_img_with margin_5px" ><span class="offset-0">上传图片</span></label>
+                        <input type="file" id="imageLoader" accept="image/*" hidden/>
+                        <div><span id="org_size_sp_i"></span></div>
+                    </div>
                     
-                    <label for="tag_input_i">标签:</label>
-                    <input type="checkbox" id="tag_input_i" name="tag_input_n" onchange="handleChange()" checked>
-                
-                    <label for="count_grid_input_i">计数网格:</label>
-                    <input type="checkbox" id="count_grid_input_i" name="count_grid_input_n" onchange="handleChange()">
-                
-                
+                    <textarea id="base64Text" class="mo-textarea" placeholder="在此处粘贴base64格式的图片文本"></textarea>
+                    <div class="flex_hz flex_xy_Center">
+                        <button id="saveImage" class="btn-0 bg_img_with flex_grow"><span class="offset-0">生成文本(刷新1)</span></button>
+                        <button id="loadImage" class="btn-0 bg_img_with flex_grow"><span class="offset-0">文本导入(刷新2)</span></button>
+                    </div>
+                    
+                </div>
+                <div id="checkboxes" class="flex_hz" >
+                    <div>
+                        <input type="checkbox" id="grid_input_i" name="grid_input_n" onchange="handleChange()" hidden>
+                        <label for="grid_input_i" class="checkbox_0 bg_img_with"><span class="offset-0">网格</span></label>
+                    </div>
+                    
+                    
+                    <div>
+                        <input type="checkbox" id="tag_input_i" name="tag_input_n" onchange="handleChange()" checked hidden>
+                        <label for="tag_input_i" class="checkbox_0 bg_img_with"><span class="offset-0">标签</span></label>
+                    </div>
 
-                    <label for="BeanedImg_input_i">预览:</label>
-                    <input type="checkbox" id="BeanedImg_input_i" name="BeanedImg_input_n" onchange="handleChange()">
+                    <div>
+                        <input type="checkbox" id="count_grid_input_i" name="count_grid_input_n" onchange="handleChange()" hidden>
+                        <label for="count_grid_input_i" class="checkbox_0 bg_img_with"><span class="offset-0">计数网格</span></label>
+                    </div>
 
+                    <div>
+                        <input type="checkbox" id="BeanedImg_input_i" name="BeanedImg_input_n" onchange="handleChange()" hidden>
+                        <label for="BeanedImg_input_i" class="checkbox_0 bg_img_with"><span class="offset-0">预览</span></label>
+                    </div>
+                    
                 </div>
             </div>
             <div id="bean_color_div_i">
@@ -142,11 +331,13 @@
                     originY = 0;
                     
                     scale = Math.min(canvas.width / img.width, canvas.height / img.height)*0.6; // 初始按比例缩放图像
-                    console.log(img.naturalWidth,img.naturalHeight)
+                    // console.log(img.naturalWidth,img.naturalHeight)
                     ctx.imageSmoothingEnabled = false;
                     ctx.mozImageSmoothingEnabled = false;
                     ctx.webkitImageSmoothingEnabled = false;
                     ctx.msImageSmoothingEnabled = false;
+
+                    processImage()
 
                     drawImage();
                     
@@ -154,7 +345,7 @@
                 org_img.src = e.target.result;
                 img.src = e.target.result;
 
-                processImage()
+                
             }
             reader.readAsDataURL(file);
 
@@ -211,11 +402,11 @@
 
             
 
-            console.log("event",event)
+            // console.log("event",event)
 
             ctx.restore();
 
-            console.log(scale,imageWidth,imageHeight,x,y,"offset",originX,originY)
+            // console.log(scale,imageWidth,imageHeight,x,y,"offset",originX,originY)
         }
 
         
@@ -289,8 +480,8 @@
                 select_i=0
                 document.querySelectorAll(`input[name="${color_with_A}_similarColorRadio_group"]`).forEach(input => {
                     if(input.checked){
-                        console.log(input.id)
-                        console.log(input.id.split("_")[1])
+                        // console.log(input.id)
+                        // console.log(input.id.split("_")[1])
                         select_i=input.id.split("_")[1]
                     }
                 });
@@ -356,8 +547,8 @@
                 
                 document.querySelectorAll(`input[name="${color_with_A}_similarColorRadio_group"]`).forEach(input => {
                     if(input.checked){
-                        console.log(input.id)
-                        console.log(input.id.split("_")[1])
+                        // console.log(input.id)
+                        // console.log(input.id.split("_")[1])
                         select_i=input.id.split("_")[1]
                     }
                 });
@@ -509,12 +700,14 @@
                     ctx.webkitImageSmoothingEnabled = false;
                     ctx.msImageSmoothingEnabled = false;
                     
+                    processImage()
+
                     drawImage();
                 };
                 org_img.src = dataURL;
                 img.src = dataURL;
 
-                processImage()
+                
             }
 
         });
@@ -637,7 +830,8 @@
             // 按相似度从高到低排序
             similarities.sort((a, b) => b.similarity - a.similarity);
 
-            return similarities.slice(0,5);
+            // return similarities.slice(0,5);
+            return similarities;
         }
 
         // Convert hex color to RGB
@@ -665,6 +859,15 @@
         let similarColorsDiv = document.getElementById("bean_color_div_i");
         if (similarColorsDiv) {
             similarColorsDiv.innerHTML = ""; // 清空之前的内容
+            similarColorsDiv.style.border= '6px solid transparent'
+            
+            similarColorsDiv.style.borderImage="url('/asstes/menu_border.png') 15 stretch"
+            similarColorsDiv.style.overflowX="hidden"
+            similarColorsDiv.style.maxWidth="330px"
+            similarColorsDiv.classList.add("flex-scroll");
+
+            similarColorsDiv.style.backgroundColor="#CFE7F5"
+
             similarityLists=[]
             Object.keys(color_count).forEach(color_with_A => {
                 
@@ -673,11 +876,10 @@
                 similarityLists.push(similarityList)
 
                 let colorBlock = document.createElement("div");
-                colorBlock.style.border = "1px solid #ccc";
+                colorBlock.style.borderBottom = "3px solid #555555";
                 colorBlock.style.margin = "5px";
                 colorBlock.style.padding = "5px";
                 colorBlock.style.display = "flex";
-                colorBlock.style.alignItems = "center";
 
                 let CountText = document.createElement("span");
                 CountText.textContent = color_count[color_with_A]+"格";
@@ -694,12 +896,21 @@
                 originalColorBlock.style.height = "20px";
                 originalColorBlock.style.backgroundColor = `#${color}`;
                 originalColorBlock.style.marginRight = "10px";
+                originalColorBlock.style.minWidth = "20px";
+                originalColorBlock.style.minHeight = "20px";
 
 
                 colorBlock.appendChild(CountText)
                 colorBlock.appendChild(originalColorText)
                 colorBlock.appendChild(originalColorBlock);
 
+
+
+                let similarColorCompsDiv = document.createElement("div");
+                similarColorCompsDiv.style.display = "flex";
+                similarColorCompsDiv.style.flexDirection = "row";
+                similarColorCompsDiv.style.overflowX = "scroll";
+                similarColorCompsDiv.classList.add("flex-scroll");
                 let index = 0;
                 similarityList.forEach(similarity => {
                     let similarColorComp = document.createElement("div");
@@ -764,7 +975,10 @@
                     similarColorComp.appendChild(similarityLabel);
                     similarColorComp.appendChild(similarColorRadio);
 
-                    colorBlock.appendChild(similarColorComp);
+                    similarColorCompsDiv.appendChild(similarColorComp);
+                    
+
+                    colorBlock.appendChild(similarColorCompsDiv);
                     index++;
                 });
 
@@ -804,9 +1018,81 @@
         history.pushState({ img_base64: base64Text }, '', newUrl);
     }
     
-    
+    function css_auto() {
+        
+        
+        // 调试信息：输出图片路径
+        // console.log('Loading image from:', img.src);
+        
+        
+            let Element_list = document.querySelectorAll('.bg_img_with');
+
+            for (let Element of Element_list) {{
+                
+                let img = new Image();
+                img.src = window.getComputedStyle(Element).getPropertyValue('background-image').split("\"")[1];
+                //console.log(window.getComputedStyle(Element).getPropertyValue('background-image').split("\"")[1])
+                img.onload = function() {
+                    if (Element) {
+                        // console.log('checkbox_0 element found');
+                        Element.style.width = img.width + 'px';
+                        Element.style.height = img.height + 'px';
+                    } else {
+                        console.error('checkbox_0 element not found');
+                    }
+                }
+            }
+        };
+        
+        img.onerror = function() {
+            console.error('Image failed to load');
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const dropZone = document.getElementById('canvas');
+        const fileInput = document.getElementById('imageLoader');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // dropZone.style.borderColor = '#000';
+            console.log("dragover")
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // dropZone.style.borderColor = '#ccc';
+            console.log("dragleave")
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // dropZone.style.borderColor = '#ccc';
+            console.log("drop")
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                const file = files[0];
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                
+                // 触发 file input 的 change 事件以便处理文件上传等后续操作
+                const event = new Event('change');
+                fileInput.dispatchEvent(event);
+            } else {
+                alert('Please drop an image file.');
+            }
+        });
+    });
+
     // 页面加载时执行的函数
     window.onload = function() {
+
+        
         // 获取 URL 参数
         const urlParams = new URLSearchParams(window.location.search);
         const imgBase64Param = urlParams.get('img_base64');
@@ -816,7 +1102,12 @@
             const base64Textarea = document.getElementById('base64Text');
             base64Textarea.value = imgBase64Param;
         }
+        css_auto()
     }
+
+
+
+
 
 
         
@@ -825,6 +1116,10 @@
 </html>
 
 <script>
+    // noctiluca 夜光
+    // tran 透明
+    // pearlescent 珠光
+    // lightsequins 亮片
     const bean_color_json_table={"table":[
         {"mm":"A1" ,"mard":"F1" ,"rgb":"fda098" ,"type":""},
         {"mm":"A2" ,"mard":"F2" ,"rgb":"fa6a62" ,"type":""},
@@ -944,7 +1239,7 @@
         {"mm":"E21" ,"mard":"E14" ,"rgb":"fdd2bf" ,"type":""},       
         {"mm":"E22" ,"mard":"G17" ,"rgb":"5d5249" ,"type":""},       
         {"mm":"E23" ,"mard":"H13" ,"rgb":"ece1cb" ,"type":""},       
-        {"mm":"F1" ,"mard":"H1" ,"rgb":"fefefe" ,"type":""},
+        {"mm":"F1" ,"mard":"H1" ,"rgb":"fefefe" ,"type":"tran"},
         {"mm":"F2" ,"mard":"H2" ,"rgb":"ffffff" ,"type":""},
         {"mm":"F3" ,"mard":"H3" ,"rgb":"aeaeae" ,"type":""},
         {"mm":"F4" ,"mard":"H4" ,"rgb":"979296" ,"type":""},
@@ -956,17 +1251,17 @@
         {"mm":"F10" ,"mard":"H9" ,"rgb":"e6e3dc" ,"type":""},        
         {"mm":"F11" ,"mard":"H11" ,"rgb":"cecdcb" ,"type":""},       
         {"mm":"F12" ,"mard":"H14" ,"rgb":"c5ced8" ,"type":""},       
-        {"mm":"L2" ,"mard":"R10" ,"rgb":"f8da54" ,"type":"tran"},    
-        {"mm":"L6" ,"mard":"T1" ,"rgb":"fcfdff" ,"type":"tran"},     
-        {"mm":"L7" ,"mard":"R13" ,"rgb":"56534e" ,"type":"tran"},    
-        {"mm":"P1" ,"mard":"P1" ,"rgb":"f9f9f9" ,"type":"tran"},     
-        {"mm":"P2" ,"mard":"P2" ,"rgb":"ababab" ,"type":"tran"},     
-        {"mm":"P3" ,"mard":"P5" ,"rgb":"eb903f" ,"type":"tran"},     
-        {"mm":"P4" ,"mard":"P3" ,"rgb":"b6dbaf" ,"type":"tran"},     
-        {"mm":"P5" ,"mard":"P4" ,"rgb":"fea2a3" ,"type":"tran"},     
-        {"mm":"P6" ,"mard":"P7" ,"rgb":"e79273" ,"type":"tran"},     
-        {"mm":"P7" ,"mard":"P8" ,"rgb":"ecdb59" ,"type":"tran"},     
-        {"mm":"P8" ,"mard":"P6" ,"rgb":"63cea2" ,"type":"tran"},     
+        {"mm":"L2" ,"mard":"R10" ,"rgb":"f8da54" ,"type":"lightsequins"},    
+        {"mm":"L6" ,"mard":"T1" ,"rgb":"fcfdff" ,"type":"lightsequins"},     
+        {"mm":"L7" ,"mard":"R13" ,"rgb":"56534e" ,"type":"lightsequins"},    
+        {"mm":"P1" ,"mard":"P1" ,"rgb":"f9f9f9" ,"type":"pearlescent"},     
+        {"mm":"P2" ,"mard":"P2" ,"rgb":"ababab" ,"type":"pearlescent"},     
+        {"mm":"P3" ,"mard":"P5" ,"rgb":"eb903f" ,"type":"pearlescent"},     
+        {"mm":"P4" ,"mard":"P3" ,"rgb":"b6dbaf" ,"type":"pearlescent"},     
+        {"mm":"P5" ,"mard":"P4" ,"rgb":"fea2a3" ,"type":"pearlescent"},     
+        {"mm":"P6" ,"mard":"P7" ,"rgb":"e79273" ,"type":"pearlescent"},     
+        {"mm":"P7" ,"mard":"P8" ,"rgb":"ecdb59" ,"type":"pearlescent"},     
+        {"mm":"P8" ,"mard":"P6" ,"rgb":"63cea2" ,"type":"pearlescent"},     
         {"mm":"T1" ,"mard":"R1" ,"rgb":"d40e1f" ,"type":"tran"},     
         {"mm":"T2" ,"mard":"R9" ,"rgb":"945ab1" ,"type":"tran"},     
         {"mm":"T3" ,"mard":"R8" ,"rgb":"1960c8" ,"type":"tran"},     
@@ -974,11 +1269,11 @@
         {"mm":"T5" ,"mard":"R7" ,"rgb":"1d779c" ,"type":"tran"},     
         {"mm":"T6" ,"mard":"R11" ,"rgb":"fcecf7" ,"type":"tran"},    
         {"mm":"T7" ,"mard":"R12" ,"rgb":"d8d4d3" ,"type":"tran"},    
-        {"mm":"Y1" ,"mard":"Y1" ,"rgb":"ff6fb7" ,"type":"tran"},     
-        {"mm":"Y2" ,"mard":"Y2" ,"rgb":"fdb583" ,"type":"tran"},     
-        {"mm":"Y3" ,"mard":"Y3" ,"rgb":"d8fca4" ,"type":"tran"},     
-        {"mm":"Y4" ,"mard":"Y4" ,"rgb":"91dafb" ,"type":"tran"},     
-        {"mm":"Y5" ,"mard":"Y5" ,"rgb":"e987ea" ,"type":"tran"},     
+        {"mm":"Y1" ,"mard":"Y1" ,"rgb":"ff6fb7" ,"type":"noctiluca"},     
+        {"mm":"Y2" ,"mard":"Y2" ,"rgb":"fdb583" ,"type":"noctiluca"},     
+        {"mm":"Y3" ,"mard":"Y3" ,"rgb":"d8fca4" ,"type":"noctiluca"},     
+        {"mm":"Y4" ,"mard":"Y4" ,"rgb":"91dafb" ,"type":"noctiluca"},     
+        {"mm":"Y5" ,"mard":"Y5" ,"rgb":"e987ea" ,"type":"noctiluca"},     
         {"mm":"YX1" ,"mard":"M6" ,"rgb":"c8b999" ,"type":""},        
         {"mm":"YX2" ,"mard":"M3" ,"rgb":"718898" ,"type":""},        
         {"mm":"YX3" ,"mard":"M14" ,"rgb":"c0725d" ,"type":""},       
