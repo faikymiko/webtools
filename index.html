@@ -31,8 +31,8 @@
             }
             #container {
                 position: relative;
-                width: 800px; /* 限制显示区域的宽度 */
-                height: 800px; /* 限制显示区域的高度 */
+                width: 750px; /* 限制显示区域的宽度 */
+                height: 750px; /* 限制显示区域的高度 */
                 overflow: hidden; /* 隐藏超出显示区域的部分 */
 
                 border: 15px solid transparent;
@@ -147,8 +147,8 @@
 
                 border: 1px solid black;
                 touch-action: none; /* 防止默认触摸动作 */
-                width: 800px; /* 设置画布显示宽度 */
-                height: 800px; /* 设置画布显示高度 */
+                width: 750px; /* 设置画布显示宽度 */
+                height: 750px; /* 设置画布显示高度 */
                 flex-shrink: 0; /*防止 canvas 缩小*/
 
                 background: #fff;
@@ -335,8 +335,8 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 img.onload = () => {
-                    canvas.width = 800; // 固定画布宽度为800
-                    canvas.height = 800; // 固定画布高度为800
+                    canvas.width = 750; // 固定画布宽度为750
+                    canvas.height = 750; // 固定画布高度为750
                     originX = 0;
                     originY = 0;
                     
@@ -699,8 +699,8 @@
             const dataURL = document.getElementById("base64Text").value;
             if (dataURL) {
                 img.onload = () => {
-                    canvas.width = 800; // 固定画布宽度为800
-                    canvas.height = 800; // 固定画布高度为800
+                    canvas.width = 750; // 固定画布宽度为750
+                    canvas.height = 750; // 固定画布高度为750
                     originX = 0;
                     originY = 0;
                     scale = Math.min(canvas.width / img.width, canvas.height / img.height)*0.6; // 初始按比例缩放图像
