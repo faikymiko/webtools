@@ -8,16 +8,10 @@
             document.addEventListener('DOMContentLoaded', (event) => {
               // Get the current URL
               const currentUrl = window.location.href;
-                
-              console.log(currentUrl)
+              const baseURL=""
               // Check if the URL contains 'faikymiko.github.io'
               if (currentUrl.includes('faikymiko.github.io')) {
-                // Create a base element
-                const base = document.createElement('base');
-                base.href = '/webtools/';
-                
-                // Append the base element to the head
-                document.head.appendChild(base);
+                const baseURL = '/webtools/';
               }
             });
           </script>
@@ -43,7 +37,7 @@
                 overflow: hidden; /* 隐藏超出显示区域的部分 */
 
                 border: 15px solid transparent;
-                border-image:url('/asstes/menu_border.png') 15 stretch;
+                border-image:url(javascript:(baseURL+'/asstes/menu_border.png'))) 15 stretch;
                 box-sizing: border-box;
 
             }
