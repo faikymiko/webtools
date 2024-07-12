@@ -36,7 +36,7 @@
                 overflow: hidden; /* 隐藏超出显示区域的部分 */
 
                 border: 15px solid transparent;
-                border-image:url(javascript:(baseURL+'/asstes/menu_border.png'))) 15 stretch;
+                border-image:url('./asstes/menu_border.png') 15 stretch;
                 box-sizing: border-box;
 
             }
@@ -89,7 +89,7 @@
 
             .checkbox_0{
                 
-                background-image: url('/asstes/checkbox_btn_1.png');
+                background-image: url('./asstes/checkbox_btn_1.png');
                 background-repeat: no-repeat;
                 background-position: center;
                 vertical-align: middle;
@@ -106,7 +106,7 @@
             }
 
             input[type="checkbox"]:checked + .checkbox_0{
-                background-image: url('/asstes/checkbox_btn_2.png');
+                background-image: url('./asstes/checkbox_btn_2.png');
             }
 
             .offset-0{
@@ -131,13 +131,13 @@
             .btn-0{
                 background: transparent;
                 border: none;
-                background-image: url('/asstes/btn_1.png');
+                background-image: url('./asstes/btn_1.png');
                 
             }
             .btn-0:active{
                 background: transparent;
                 border: none;
-                background-image: url('/asstes/btn_2.png');
+                background-image: url('./asstes/btn_2.png');
             }
             .btn-0:active > .offset-0{
                 transform: translate(0, 0rem);
@@ -163,7 +163,7 @@
 
             input[type="checkbox"]:checked + .checkbox_0{
                 
-                background-image: url('/asstes/checkbox_btn_2.png');
+                background-image: url('./asstes/checkbox_btn_2.png');
             }
 
             .flex_hz{
@@ -871,7 +871,7 @@
             similarColorsDiv.innerHTML = ""; // 清空之前的内容
             similarColorsDiv.style.border= '6px solid transparent'
             
-            similarColorsDiv.style.borderImage="url('/asstes/menu_border.png') 15 stretch"
+            similarColorsDiv.style.borderImage="url('./asstes/menu_border.png') 15 stretch"
             similarColorsDiv.style.overflowX="hidden"
             similarColorsDiv.style.maxWidth="330px"
             similarColorsDiv.classList.add("flex-scroll");
