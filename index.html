@@ -4,6 +4,22 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Image Zoom and Pan with Canvas</title>
+        <script>
+            document.addEventListener('DOMContentLoaded', (event) => {
+              // Get the current URL
+              const currentUrl = window.location.href;
+        
+              // Check if the URL contains 'faikymiko.github.io'
+              if (currentUrl.includes('faikymiko.github.io')) {
+                // Create a base element
+                const base = document.createElement('base');
+                base.href = '/webtools/';
+                
+                // Append the base element to the head
+                document.head.appendChild(base);
+              }
+            });
+          </script>
         <style>
             *{
                 font-family:"仿宋_GB2312";
