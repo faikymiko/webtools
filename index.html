@@ -194,6 +194,9 @@
                 margin: 5px;
             }
 
+            #org_size_sp_i{
+                color:#fff;
+            }
         </style>
         <style>
             /* 去除默认样式 */
@@ -686,12 +689,23 @@
             let base64String = temp_canvas.toDataURL('image/png');  // 可以指定图片格式，如 'image/jpeg' 或 'image/png'
 
             document.getElementById("base64Text").value = base64String
-
-            document.getElementById('org_size_sp_i').innerText=org_img.width+" x "+org_img.height
+            
+            
+            
             
             update_img_arg_to_url()
 
             processImage()
+            
+            let sumValues = 0;
+
+            for (let key in color_count) {
+                if (key.slice(-2) !== '00') {
+                    sumValues += color_count[key];
+                }
+            }
+
+            document.getElementById('org_size_sp_i').innerText=org_img.width+" x "+org_img.height+"  "+sumValues+"格"
         });
 
         const loadImageBtn = document.getElementById('loadImage');
