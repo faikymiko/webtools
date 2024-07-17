@@ -197,6 +197,10 @@
             #org_size_sp_i{
                 color:#fff;
             }
+
+            .flex_warp{
+                flex-wrap: wrap; /* 允许换行 */
+            }
         </style>
         <style>
             /* 去除默认样式 */
@@ -300,6 +304,23 @@
                         <input type="checkbox" id="BeanedImg_input_i" name="BeanedImg_input_n" onchange="handleChange()" hidden>
                         <label for="BeanedImg_input_i" class="checkbox_0 bg_img_with"><span class="offset-0">预览</span></label>
                     </div>
+
+                    <!-- <div class="flex_hz flex_warp">
+                        <input type="checkbox" id="bean_type_select_0" name="bean_type_select_group" onchange="handleChange()" hidden checked>
+                        <label for="bean_type_select_0" class="checkbox_0 bg_img_with" ><span class="offset-0">实色</span></label>
+
+                        <input type="checkbox" id="bean_type_select_1" name="bean_type_select_group" onchange="handleChange()" hidden>
+                        <label for="bean_type_select_1" class="checkbox_0 bg_img_with"><span class="offset-0">透明</span></label>
+
+                        <input type="checkbox" id="bean_type_select_2" name="bean_type_select_group" onchange="handleChange()" hidden>
+                        <label for="bean_type_select_2" class="checkbox_0 bg_img_with"><span class="offset-0">珠光</span></label>
+
+                        <input type="checkbox" id="bean_type_select_3" name="bean_type_select_group" onchange="handleChange()" hidden>
+                        <label for="bean_type_select_3" class="checkbox_0 bg_img_with"><span class="offset-0">亮片</span></label>
+
+                        <input type="checkbox" id="bean_type_select_4" name="bean_type_select_group" onchange="handleChange()" hidden>
+                        <label for="bean_type_select_4" class="checkbox_0 bg_img_with"><span class="offset-0">夜光</span></label>
+                    </div> -->
                     
                 </div>
             </div>
@@ -327,6 +348,7 @@
         let color_count = {};
         let color_pos = {};
         let similarityLists=[];
+        let colors_select_info=""
 
         
 
@@ -418,6 +440,8 @@
             // console.log("event",event)
 
             ctx.restore();
+
+            
 
             // console.log(scale,imageWidth,imageHeight,x,y,"offset",originX,originY)
         }
@@ -579,6 +603,32 @@
 
         }
 
+        function update_colors_select_info(){
+            // 设置文本样式
+            
+            colors_select_info=""
+            
+            i=0
+            Object.keys(color_pos).forEach(color_with_A => {
+                
+                select_i=0
+                document.querySelectorAll(`input[name="${color_with_A}_similarColorRadio_group"]`).forEach(input => {
+                    if(input.checked){
+                        // console.log(input.id)
+                        // console.log(input.id.split("_")[1])
+                        select_i=input.id.split("_")[1]
+                    }
+                });
+
+                let select_rgb=similarityLists[i][select_i].rgb
+                
+                colors_select_info+=color_with_A+":"+select_rgb+";"
+                
+                i=i+1
+            });
+
+        }
+
 
 
 
@@ -688,12 +738,12 @@
             // 获取 Base64 数据
             let base64String = temp_canvas.toDataURL('image/png');  // 可以指定图片格式，如 'image/jpeg' 或 'image/png'
 
-            document.getElementById("base64Text").value = base64String
+            document.getElementById("base64Text").value = base64String+"\n"+colors_select_info
             
             
             
             
-            update_img_arg_to_url()
+            update_arg_to_url()
 
             processImage()
             
@@ -710,7 +760,15 @@
 
         const loadImageBtn = document.getElementById('loadImage');
         loadImageBtn.addEventListener('click', () => {
-            const dataURL = document.getElementById("base64Text").value;
+
+            let input_text_split=document.getElementById("base64Text").value.split("\n")
+            input_text_split = input_text_split.filter(item => item.trim() !== "");
+
+            let dataURL = input_text_split[0]
+            if( input_text_split.length==2 ){
+                colors_select_info = input_text_split[1]
+            }
+
             if (dataURL) {
                 img.onload = () => {
                     canvas.width = 750; // 固定画布宽度为750
@@ -738,6 +796,7 @@
 
         function handleChange() {
             drawImage()
+            
         }
 
         function get_rgb_list() {
@@ -880,17 +939,26 @@
         [rgb_list,color_count,color_pos] = get_rgb_list()
 
         // Update DOM with similarity results
-        let similarColorsDiv = document.getElementById("bean_color_div_i");
-        if (similarColorsDiv) {
-            similarColorsDiv.innerHTML = ""; // 清空之前的内容
-            similarColorsDiv.style.border= '6px solid transparent'
-            
-            similarColorsDiv.style.borderImage="url('./asstes/menu_border.png') 15 stretch"
-            similarColorsDiv.style.overflowX="hidden"
-            similarColorsDiv.style.maxWidth="330px"
-            similarColorsDiv.classList.add("flex-scroll");
+        let select_colors_block = document.getElementById("bean_color_div_i");
+        if (select_colors_block) {
+            select_colors_block.innerHTML = ""; // 清空之前的内容
 
-            similarColorsDiv.style.backgroundColor="#CFE7F5"
+            processImageing_show_span=document.createElement("span")
+            processImageing_show_span.innerHTML="正在生成.."
+            processImageing_show_span.id="processImageing_show_span"
+            select_colors_block.appendChild(processImageing_show_span)
+
+            setTimeout(() => { select_colors_block.appendChild(processImageing_show_span) },0)
+
+
+            select_colors_block.style.border= '6px solid transparent'
+            
+            select_colors_block.style.borderImage="url('./asstes/menu_border.png') 15 stretch"
+            select_colors_block.style.overflowX="hidden"
+            select_colors_block.style.maxWidth="330px"
+            select_colors_block.classList.add("flex-scroll");
+
+            select_colors_block.style.backgroundColor="#CFE7F5"
 
             similarityLists=[]
             Object.keys(color_count).forEach(color_with_A => {
@@ -935,6 +1003,15 @@
                 similarColorCompsDiv.style.flexDirection = "row";
                 similarColorCompsDiv.style.overflowX = "scroll";
                 similarColorCompsDiv.classList.add("flex-scroll");
+
+
+                let colors_select_info_kv
+                if(colors_select_info){
+                    colors_select_info_kv={}
+                    colors_select_info.split(";").forEach(kv_str=>{
+                        colors_select_info_kv[kv_str.split(":")[0]]=kv_str.split(":")[1]
+                    })
+                }
                 let index = 0;
                 similarityList.forEach(similarity => {
                     let similarColorComp = document.createElement("div");
@@ -950,10 +1027,27 @@
                     similarColorRadio.name = `${color_with_A}_similarColorRadio_group`; // 同一组的单选框需设置相同的name
                     similarColorRadio.style.display = "none"; // 隐藏单选框
                     // 初始状态设置第一个为选中
-                    if (index === 0) {
-                        similarColorRadio.checked = true;
-                        similarColorComp.style.border = "1px solid #ff0000ff"; // 设置为选中边框颜色
+                    // if (index === 0) {
+                    //     similarColorRadio.checked = true;
+                    //     similarColorComp.style.border = "1px solid #ff0000ff"; // 设置为选中边框颜色
+                    // }
+
+                    
+
+                    if(colors_select_info_kv){
+
+                        if(colors_select_info_kv[color_with_A] == similarity.rgb){
+                            similarColorRadio.checked = true;
+                            similarColorComp.style.border = "1px solid #ff0000ff"; // 设置为选中边框颜色
+                        }
+
+                    }else{
+                        if (index === 0) {
+                            similarColorRadio.checked = true;
+                            similarColorComp.style.border = "1px solid #ff0000ff"; // 设置为选中边框颜色
+                        }
                     }
+
 
                     // 添加点击事件监听器
                     similarColorComp.addEventListener('click', function() {
@@ -972,6 +1066,7 @@
 
                         if(!old_Radio_checked){
                             handleChange()
+                            update_colors_select_info()
                         }
                         
                     });
@@ -992,8 +1087,10 @@
 
                     let similarityLabel = document.createElement("span");
                     similarityLabel.textContent = similarity.mm;
+                    similarityLabel.textContent += (!bean_type_table[similarity.type]? "":"["+bean_type_table[similarity.type]+"]")
                     similarityLabel.style.fontSize = "10px";
                     similarityLabel.style.marginRight = "3px";
+                    similarityLabel.style.whiteSpace= "nowrap";
 
                     similarColorComp.appendChild(similarColorBlock);
                     similarColorComp.appendChild(similarityLabel);
@@ -1005,12 +1102,14 @@
                     colorBlock.appendChild(similarColorCompsDiv);
                     index++;
                 });
-
-                similarColorsDiv.appendChild(colorBlock);
+                
+                select_colors_block.appendChild(colorBlock);
             });
+            select_colors_block.removeChild(processImageing_show_span)
+            
         }
 
-
+        update_colors_select_info()
         return [ rgb_list, color_count, color_pos ];
     }
 
@@ -1021,9 +1120,6 @@
 
     }
 
-    // 获取当前 URL 参数
-    const urlParams = new URLSearchParams(window.location.search);
-    let imgBase64Param = urlParams.get('img_base64') || '';
 
     // 辅助函数：更新 URL 参数
     function updateQueryStringParameter(uri, key, value) {
@@ -1036,10 +1132,29 @@
         }
     }
 
-    function update_img_arg_to_url(){
-        const base64Text = document.getElementById("base64Text").value;
-        const newUrl = updateQueryStringParameter(window.location.href, 'img_base64', base64Text);
-        history.pushState({ img_base64: base64Text }, '', newUrl);
+    function update_arg_to_url(){
+
+        let input_text_split=document.getElementById("base64Text").value.split("\n")
+        
+        input_text_split = input_text_split.filter(item => item.trim() !== "");
+
+        console.log(input_text_split)
+
+        let base64Text=input_text_split[0]
+
+        if(input_text_split.length==2){
+            colors_select_info=input_text_split[1]
+        }
+
+
+        let newUrl = window.location.href
+        console.log(newUrl)
+        newUrl = updateQueryStringParameter(newUrl, 'img_base64', base64Text);
+        console.log(newUrl)
+        newUrl = updateQueryStringParameter(newUrl, 'colors_select_info', colors_select_info);
+        console.log(newUrl)
+
+        history.pushState({ "img_base64": base64Text,"colors_select_info":colors_select_info}, '', newUrl);
     }
     
     function css_auto() {
@@ -1120,11 +1235,12 @@
         // 获取 URL 参数
         const urlParams = new URLSearchParams(window.location.search);
         const imgBase64Param = urlParams.get('img_base64');
+        colors_select_info = urlParams.get('colors_select_info');
 
         // 如果存在 img_base64 参数，则设置到 textarea 中
         if (imgBase64Param) {
-            const base64Textarea = document.getElementById('base64Text');
-            base64Textarea.value = imgBase64Param;
+            const Textarea = document.getElementById('base64Text');
+            Textarea.value = imgBase64Param+"\n"+colors_select_info;
         }
         css_auto()
     }
@@ -1140,10 +1256,14 @@
 </html>
 
 <script>
-    // noctiluca 夜光
-    // tran 透明
-    // pearlescent 珠光
-    // lightsequins 亮片
+    const bean_type_table={
+        "":"",
+        "tran" :"透明",
+        "pearlescent" :"珠光",
+        "lightsequins" :"亮片",
+        "noctiluca" :"夜光",
+    }
+    
     const bean_color_json_table={"table":[
         {"mm":"A1" ,"mard":"F1" ,"rgb":"fda098" ,"type":""},
         {"mm":"A2" ,"mard":"F2" ,"rgb":"fa6a62" ,"type":""},
